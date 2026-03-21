@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+import torch
 
 @dataclass
 class RL4RSConfig:
@@ -13,19 +14,32 @@ class RL4RSConfig:
     output_dir: str = "output"
     checkpoints_dir = "checkpoints"
 
+
+    # ===================================
+    # 数据处理与环境设置
+    # ===================================
     # 用户历史行为序列阶段的最大长度
     max_seq_len: int = 50
     # Slate 推荐列表的长度（每次曝光 9 个商品）
     slate_size: int = 9
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
     # ===================================
     # 模拟器网络超参数
     # ===================================
+    sim_batch_size: int = 256
+    sim_embed_dim: int = 32
+    sim_learning_rate: float = 1e-3
+    sim_epoch: int = 100
+    sim_train_ratio: float = 0.8
 
 
     # ===================================
     # 数据集维度
     # ===================================
+    # 物品个数
+    item_vocab_size: int = 400000
     # 曝光列表长度
     slate_size: int = 9
     # 用户画像维度
@@ -44,6 +58,6 @@ class RL4RSConfig:
 
         self.train_path = os.path.join(self.data_dir, self.train_data_file)
         self.item_path = os.path.join(self.data_dir, self.item_info_file)
-
+        self.checkpoints_path = os.path.join(self.output_dir, self.checkpoints_dir)
 
 cfg = RL4RSConfig()

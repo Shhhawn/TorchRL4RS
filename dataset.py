@@ -42,7 +42,7 @@ class RL4RSSimulatorDataset(Dataset):
         seq_tensor = self._parse_seq(row['user_seqfeature'], self.max_seq_len)
 
         portrait_tensor = torch.tensor(
-            [float(x) for x in str(row["user_portrait"]).split(',')],
+            [float(x) for x in str(row["user_protrait"]).split(',')],
             dtype = torch.float32
         )
 
@@ -56,7 +56,7 @@ class RL4RSSimulatorDataset(Dataset):
         item_feat_list = []
         for item in str(row["item_feature"]).split(';'):
             item_feat_list.append([float(x) for x in item.split(',')])
-        item_feat_tensor = torch.tensor(item_feat_list, dypte=torch.float32)
+        item_feat_tensor = torch.tensor(item_feat_list, dtype=torch.float32)
 
         # 奖励：用户点击反馈
         labels = torch.tensor(
@@ -74,7 +74,7 @@ class RL4RSSimulatorDataset(Dataset):
 
 
 if __name__ == "__main__":
-    data_file = "../data/rl4rs_benchmark_materials/raw_data/small_rl4rs_dataset_a_rl.csv"
+    data_file = cfg.train_path
     dataset = RL4RSSimulatorDataset(data_file, max_seq_len=8)
     test_str = "10,4,2,25"
     print(f"原始数据： {test_str}")

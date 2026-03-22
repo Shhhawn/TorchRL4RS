@@ -52,6 +52,11 @@ class RL4RSConfig:
     # embedding 维度（用于处理item_id和seq_item_id）
     embed_dim: int = 32
 
+    # ===================================
+    # 经验回放池
+    # ===================================
+    replay_buffer_size: int = 100000
+
     def __post_init__(self):
         """这个方法会在对象初始化后自动执行"""
         os.makedirs(self.output_dir, exist_ok=True)

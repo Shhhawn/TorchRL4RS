@@ -238,7 +238,7 @@ if __name__ == "__main__":
         total_reward = 0.0
         # 故意循环 15 次，测试 max_steps=10 的截断机制是否生效
         for i in range(15):
-            # Agent 的大脑还没长好，先用 Gym 自带的随机动作采样器“瞎猜”
+            # 用 Gym 自带的随机动作采样器采样
             # 会生成一个形状为 (9, 32) 且数值在 [-1.0, 1.0] 之间的随机张量
             random_action = env.action_space.sample() 
             

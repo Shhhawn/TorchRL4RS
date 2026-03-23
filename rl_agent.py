@@ -2,6 +2,8 @@ import torch
 from collections import deque
 import random
 import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
 
 from config import cfg
 
@@ -49,3 +51,81 @@ class ReplayBuffer:
         返回当前有多少数据
         """
         return len(self.buffer)
+    
+
+if __name__ == "__main__":
+    rb = ReplayBuffer()
+    batch_size = 2
+    for i in range(batch_size):
+        state = [float(i + 1)] * 3
+        action = [float(i + 2)] * 2
+        reward = 10.0
+        next_state = [float(i + 3)] * 3
+        done = 0.0
+        rb.push(state, action, reward, next_state, done)
+
+    rb.sample(batch_size)
+
+
+class Actor(nn.Module):
+    def __init__(self, state_dim=256, slate_size=9, embed_dim=32):
+        super().__init__()
+        self.slate_size = slate_size
+        self.embed_dim = embed_dim
+
+        # 输出动作总维数 slate_size * embed_dim
+        self.action_flat_dim = slate_size * embed_dim
+
+        self.net = nn.Sequential(
+            nn.Linear(state_dim, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Linear(512, self.action_flat_dim),
+            # 使用Tanh将输出压缩到[-1.0, 1.0]
+            nn.Tanh()
+        )
+
+    def forward(self, state):
+        """
+        输入：state [batch_size, state_dim(256)]
+        输出：action [batch_size, slate_size(9), item_emb_dim(32)]
+        """
+        flat_action = self.net(state)
+        # 构建动作矩阵，便于做KNN检索
+        action_matrix = flat_action.view(-1, self.slate_size, self.embed_dim)
+        return action_matrix
+    
+
+class Critic(nn.Module):
+    def __init__(self, state_dim=256, slate_size=9, embed_dim=32):
+        super().__init__()
+        self.action_flat_dim = slate_size * embed_dim
+
+        combined_dim = state_dim + self.action_flat_dim
+
+        self.net = nn.Sequential(
+            nn.Linear(combined_dim, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.LayerNorm(512),
+            nn.ReLU(),
+            # 最后一层输出一个标量Q值
+            # 因为推荐系统的Reward都是正数且肯恶搞较大，所以不加任何激活函数
+            nn.Linear(512, 1)
+        )
+
+    def forward(self, state, action):
+        """
+        输入：state [batch_size, 256], action [batch_size, slate_size(9), item_emb_dim(32)]
+        输出：Q-value [batch_size, 1]
+        """
+        flat_action = action.view(action.size(0), -1)   # [batch_size, 288]
+
+        inputs = torch.cat([state, flat_action], dim=1) # [batch_size, 544]
+
+        q_value = self.net(inputs)
+        return q_value

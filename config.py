@@ -18,10 +18,8 @@ class RL4RSConfig:
     # ===================================
     # 数据处理与环境设置
     # ===================================
-    # 用户历史行为序列阶段的最大长度
-    max_seq_len: int = 50
-    # Slate 推荐列表的长度（每次曝光 9 个商品）
-    slate_size: int = 9
+    max_seq_len: int = 50   # 用户历史行为序列阶段的最大长度
+    slate_size: int = 9     # Slate 推荐列表的长度（每次曝光 9 个商品）
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -38,24 +36,27 @@ class RL4RSConfig:
     # ===================================
     # 数据集维度
     # ===================================
-    # 物品个数
-    item_vocab_size: int = 400000
-    # 曝光列表长度
-    slate_size: int = 9
-    # 用户画像维度
-    portrait_dim: int = 42
-    # 物品特征维度
-    item_feat_dim: int = 40
-    # 历史序列长度
-    max_seq_len: int = 50
-
-    # embedding 维度（用于处理item_id和seq_item_id）
-    embed_dim: int = 32
+    item_vocab_size: int = 400000   # 物品个数
+    slate_size: int = 9     # 曝光列表长度
+    portrait_dim: int = 42  # 用户画像维度
+    item_feat_dim: int = 40 # 物品特征维度
+    max_seq_len: int = 50   # 历史序列长度
+    embed_dim: int = 32  # embedding 维度（用于处理item_id和seq_item_id）
 
     # ===================================
     # 经验回放池
     # ===================================
     replay_buffer_size: int = 100000
+
+    # ===================================
+    # Agent 设置
+    # ===================================
+    batch_size: int = 256
+    state_dim: int = 256    # state 维度
+    gamma: float = 0.99     # 折扣因子 (越接近1越看重长远收益)
+    tau: float = 0.005      # 软更新系数 (影子跟上本体的速度，极其缓慢)
+    expl_noise: float = 0.1 # 探索噪声标准差
+
 
     def __post_init__(self):
         """这个方法会在对象初始化后自动执行"""

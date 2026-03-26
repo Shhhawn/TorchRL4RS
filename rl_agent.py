@@ -1,9 +1,11 @@
 import torch
+import torch.optim as optim
 from collections import deque
 import random
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+import copy
 
 from config import cfg
 
@@ -53,22 +55,13 @@ class ReplayBuffer:
         return len(self.buffer)
     
 
-if __name__ == "__main__":
-    rb = ReplayBuffer()
-    batch_size = 2
-    for i in range(batch_size):
-        state = [float(i + 1)] * 3
-        action = [float(i + 2)] * 2
-        reward = 10.0
-        next_state = [float(i + 3)] * 3
-        done = 0.0
-        rb.push(state, action, reward, next_state, done)
-
-    rb.sample(batch_size)
-
-
 class Actor(nn.Module):
-    def __init__(self, state_dim=256, slate_size=9, embed_dim=32):
+    def __init__(
+            self, 
+            state_dim=cfg.state_dim, 
+            slate_size=cfg.slate_size, 
+            embed_dim=cfg.embed_dim
+        ):
         super().__init__()
         self.slate_size = slate_size
         self.embed_dim = embed_dim
@@ -100,7 +93,12 @@ class Actor(nn.Module):
     
 
 class Critic(nn.Module):
-    def __init__(self, state_dim=256, slate_size=9, embed_dim=32):
+    def __init__(
+            self, 
+            state_dim=cfg.state_dim, 
+            slate_size=cfg.slate_size, 
+            embed_dim=cfg.embed_dim
+        ):
         super().__init__()
         self.action_flat_dim = slate_size * embed_dim
 
@@ -129,3 +127,88 @@ class Critic(nn.Module):
 
         q_value = self.net(inputs)
         return q_value
+    
+
+class DDPGAgent:
+    def __init__(
+            self, 
+            state_dim=cfg.state_dim, 
+            slate_size=cfg.slate_size, 
+            embed_dim=cfg.embed_dim, 
+            device=cfg.device,
+            gamma=cfg.gamma,
+            tau=cfg.tau,
+            expl_noise=cfg.expl_noise
+        ):
+        self.device = device
+        self.slate_size = slate_size
+        self.embed_dim = embed_dim
+
+        self.actor = Actor(
+            state_dim=state_dim,
+            slate_size=slate_size, 
+            embed_dim=embed_dim
+        )
+
+        self.critic = Critic(
+            state_dim=state_dim,
+            slate_size=slate_size,
+            embed_dim=embed_dim
+        )
+
+        self.target_actor = copy.deepcopy(self.actor)
+        self.target_critic = copy.deepcopy(self.critic)
+
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=1e-4)
+        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=1e-3, weight_decay=1e-4)
+
+        self.gamma = gamma
+        self.tau = tau
+        self.expl_noise = expl_noise
+
+    def select_action(self, state):
+        """
+        根据当前状态，返回一个带有噪声的动作，用于与环境交互
+        """
+        # numpy (CPU) -> Tensor (GPU)
+        state_tensor = torch.tensor(state, dtype=torch.float32, device=self.device)
+
+        with torch.no_grad():
+            action = self.actor(state_tensor).squeeze(0).cpu().numpy()
+
+        noise = np.random.normal(0, self.expl_noise, size=action.shape)
+        action = np.clip(action + noise, -1.0, 1.0)
+
+        return action
+    
+    def update(self, replay_buffer: ReplayBuffer, batch_size=cfg.batch_size):
+        """
+        DDPG 梯度下降逻辑
+        """
+        # 采样一批样本
+        states, actions, rewards, next_states, dones = replay_buffer.sample(batch_size=cfg.batch_size)
+
+        # 更新 Critic
+        with torch.no_grad():
+            # Q = reward + gamma * next_Q * (1 - done)
+            next_action = self.target_actor(next_states)
+            target_q_next = self.target_critic(next_states, next_action)
+
+        
+
+    
+
+if __name__ == "__main__":
+    rb = ReplayBuffer()
+    batch_size = 2
+    for i in range(batch_size):
+        state = [float(i + 1)] * 3
+        action = [float(i + 2)] * 2
+        reward = 10.0
+        next_state = [float(i + 3)] * 3
+        done = 0.0
+        rb.push(state, action, reward, next_state, done)
+
+    rb.sample(batch_size)
+
+
